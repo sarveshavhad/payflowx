@@ -79,7 +79,8 @@ public class TransactionService {
                 transaction.getAmount(),
                 transaction.getSenderWallet().getUser().getEmail(),
                 transaction.getReceiverWallet().getUser().getEmail(),
-                transaction.getCreatedAt()
+                transaction.getCreatedAt(),
+                transaction.getDescription()
         );
 
     }

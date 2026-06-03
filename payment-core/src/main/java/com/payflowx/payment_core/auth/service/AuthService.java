@@ -5,6 +5,8 @@ import com.payflowx.payment_core.auth.dto.LoginResponse;
 import com.payflowx.payment_core.auth.dto.RegisterRequest;
 import com.payflowx.payment_core.auth.dto.RegisterResponse;
 import com.payflowx.payment_core.common.enums.UserRole;
+import com.payflowx.payment_core.exception.EmailAlreadyExistsException;
+import com.payflowx.payment_core.exception.InvalidCredentialsException;
 import com.payflowx.payment_core.security.jwt.JwtService;
 import com.payflowx.payment_core.user.entity.User;
 import com.payflowx.payment_core.user.repository.UserRepository;
@@ -30,7 +32,7 @@ public class AuthService {
     public RegisterResponse register(RegisterRequest request){
 
         if(userRepository.existsByEmail(request.getEmail())){
-            throw new RuntimeException("Email already exists");
+            throw new EmailAlreadyExistsException("Email already exists");
         }
 
         User user = new User();
@@ -50,7 +52,7 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() ->new RuntimeException("Invalid credentials"));
+                .orElseThrow(() ->new InvalidCredentialsException("Invalid credentials"));
 
         boolean isPasswordValid = passwordEncoder.matches(
                 request.getPassword(),

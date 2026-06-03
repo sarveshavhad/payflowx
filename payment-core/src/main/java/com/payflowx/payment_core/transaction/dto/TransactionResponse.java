@@ -27,4 +27,6 @@ public class TransactionResponse {
 
     private LocalDateTime createdAt;
 
+    private String description;
+
 }

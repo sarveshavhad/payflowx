@@ -2,6 +2,10 @@ package com.payflowx.payment_core.wallet.service;
 
 import com.payflowx.payment_core.common.constants.SystemConstants;
 import com.payflowx.payment_core.common.enums.TransactionType;
+import com.payflowx.payment_core.exception.InsufficientBalanceException;
+import com.payflowx.payment_core.exception.SelfTransferException;
+import com.payflowx.payment_core.exception.UserNotFoundException;
+import com.payflowx.payment_core.exception.WalletNotFoundException;
 import com.payflowx.payment_core.transaction.entity.Transaction;
 import com.payflowx.payment_core.transaction.service.TransactionService;
 import com.payflowx.payment_core.user.entity.User;
@@ -47,11 +51,11 @@ public class WalletService {
 
         Wallet customerWallet = walletRepository
                 .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Wallet not found"));
+                .orElseThrow(() -> new WalletNotFoundException("Receiver Wallet not found"));
 
         Wallet systemWallet = walletRepository
                 .findByUserEmail(SystemConstants.SYSTEM_EMAIL)
-                .orElseThrow(() -> new RuntimeException("System wallet not found"));
+                .orElseThrow(() -> new WalletNotFoundException("System wallet not found"));
 
         Transaction transaction = transactionService
                 .createPendingTransaction(
@@ -89,28 +93,29 @@ public class WalletService {
         //Load Sender Wallet
         Wallet senderWallet =  walletRepository
                 .findByUserId(senderUserId)
-                .orElseThrow(() -> new RuntimeException("Sender wallet not found"));
+                .orElseThrow(() -> new WalletNotFoundException("Sender wallet not found"));
 
         System.out.println( "Receiver:"+request.getReceiverEmail());
         // Find Receiver by Email
         User receiverUser = userRepository
                 .findByEmail(request.getReceiverEmail())
-                .orElseThrow(() -> new RuntimeException("Receiver not found"));
+                .orElseThrow(() -> new UserNotFoundException("Receiver not found"));
 
         //Prevent Self Transfer
         if(receiverUser.getId().equals(senderUserId)){
-            throw new RuntimeException("Cannot Transfer to yourself");
+            throw new SelfTransferException("Cannot Transfer to yourself");
         }
 
         //Load Receiver Wallet
         Wallet receiverWallet = walletRepository
                 .findByUserEmail(request.getReceiverEmail())
-                .orElseThrow(() -> new RuntimeException("Receiver wallet not found"));
+                .orElseThrow(() -> new WalletNotFoundException("Receiver wallet not found"));
 
         //Validate Balance
         if(senderWallet.getBalance().compareTo(request.getAmount()) < 0) {
 
-            throw new RuntimeException("Insufficient balance");
+            throw new InsufficientBalanceException(
+                    "Insufficient balance");
         }
 
         //Create Transaction(PENDING)
@@ -119,7 +124,7 @@ public class WalletService {
                 receiverWallet,
                 request.getAmount(),
                 TransactionType.WALLET_TRANSFER,
-                "Wallet Transfer");
+                request.getDescription());
 
         //Debit Sender
         senderWallet.setBalance(
