@@ -57,4 +57,6 @@ public class WalletController {
 
         return walletService.transfer(currentUser.getId(),request);
     }
+
+
 }
