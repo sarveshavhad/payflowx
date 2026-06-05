@@ -2,6 +2,9 @@ package com.payflowx.payment_core.transaction.service;
 
 import com.payflowx.payment_core.common.enums.TransactionStatus;
 import com.payflowx.payment_core.common.enums.TransactionType;
+import com.payflowx.payment_core.exception.TransactionAccessDeniedException;
+import com.payflowx.payment_core.exception.TransactionNotFoundException;
+import com.payflowx.payment_core.transaction.dto.TransactionDetailsResponse;
 import com.payflowx.payment_core.transaction.dto.TransactionResponse;
 import com.payflowx.payment_core.transaction.entity.Transaction;
 import com.payflowx.payment_core.transaction.repository.TransactionRepository;
@@ -74,14 +77,39 @@ public class TransactionService {
 
         return  new TransactionResponse(
                 transaction.getId(),
+                transaction.getAmount(),
                 transaction.getType(),
                 transaction.getStatus(),
-                transaction.getAmount(),
                 transaction.getSenderWallet().getUser().getEmail(),
                 transaction.getReceiverWallet().getUser().getEmail(),
-                transaction.getCreatedAt(),
-                transaction.getDescription()
+                transaction.getCreatedAt()
+        );
+
+    }
+
+    public TransactionDetailsResponse getTransaction(UUID transactionId, UUID currentUserid) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new TransactionNotFoundException("Transaction not found."));
+
+        UUID senderId = transaction.getSenderWallet().getUser().getId();
+
+        UUID receiverId = transaction.getReceiverWallet().getUser().getId();
+
+        if(!senderId.equals(currentUserid) && !receiverId.equals(currentUserid)){
+            throw new TransactionAccessDeniedException("You're not authorized to view this transaction");
+        }
+
+        return new TransactionDetailsResponse(
+                transaction.getId(),
+                transaction.getSenderWallet().getUser().getEmail(),
+                transaction.getReceiverWallet().getUser().getEmail(),
+                transaction.getAmount(),
+                transaction.getType(),
+                transaction.getStatus(),
+                transaction.getDescription(),
+                transaction.getCreatedAt()
         );
 
     }
 }
+

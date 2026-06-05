@@ -11,19 +11,21 @@ import java.util.UUID;
 
 @Getter
 @AllArgsConstructor
-public class TransactionResponse {
+public class TransactionDetailsResponse {
 
-    private UUID transactionId;
-
-    private BigDecimal amount;
-
-    private TransactionType transactionType;
-
-    private TransactionStatus transactionStatus;
+    private UUID userId;
 
     private String senderEmail;
 
     private String receiverEmail;
+
+    private BigDecimal amount;
+
+    private TransactionType type;
+
+    private TransactionStatus status;
+
+    private String description;
 
     private LocalDateTime createdAt;
 
