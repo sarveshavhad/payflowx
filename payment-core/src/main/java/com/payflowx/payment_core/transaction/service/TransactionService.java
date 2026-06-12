@@ -10,6 +10,10 @@ import com.payflowx.payment_core.transaction.entity.Transaction;
 import com.payflowx.payment_core.transaction.repository.TransactionRepository;
 import com.payflowx.payment_core.wallet.entity.Wallet;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -59,17 +63,19 @@ public class TransactionService {
 
     }
 
-    public List<TransactionResponse> getMyTransactions(UUID userId) {
+    public Page<TransactionResponse> getMyTransactions(UUID userId, int page, int size) {
 
-        List<Transaction> transactions =
-                transactionRepository.findBySenderWalletUserIdOrReceiverWalletUserIdOrderByCreatedAtDesc(
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<Transaction> transactions =
+                transactionRepository.findBySenderWalletUserIdOrReceiverWalletUserId(
                         userId,
-                        userId
+                        userId,
+                        pageable
                 );
 
-        return transactions.stream()
-                .map(this::toResponse)
-                .toList();
+        return transactions
+                .map(this::toResponse);
 
     }
 
