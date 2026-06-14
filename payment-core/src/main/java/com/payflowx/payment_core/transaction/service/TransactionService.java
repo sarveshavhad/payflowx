@@ -5,15 +5,18 @@ import com.payflowx.payment_core.common.enums.TransactionType;
 import com.payflowx.payment_core.exception.TransactionAccessDeniedException;
 import com.payflowx.payment_core.exception.TransactionNotFoundException;
 import com.payflowx.payment_core.transaction.dto.TransactionDetailsResponse;
+import com.payflowx.payment_core.transaction.dto.TransactionFilterRequest;
 import com.payflowx.payment_core.transaction.dto.TransactionResponse;
 import com.payflowx.payment_core.transaction.entity.Transaction;
 import com.payflowx.payment_core.transaction.repository.TransactionRepository;
+import com.payflowx.payment_core.transaction.specification.TransactionSpecification;
 import com.payflowx.payment_core.wallet.entity.Wallet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -63,14 +66,24 @@ public class TransactionService {
 
     }
 
-    public Page<TransactionResponse> getMyTransactions(UUID userId, int page, int size) {
+    public Page<TransactionResponse> getMyTransactions(UUID userId, TransactionFilterRequest filter, int page, int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
+        Specification<Transaction> specification = TransactionSpecification.belongsToUser(userId);
+
+        if(filter.getType() != null){
+            specification = specification.and(TransactionSpecification.hasType(filter.getType()));
+        }
+
+        if(filter.getStatus() != null){
+            specification = specification.and(
+                    TransactionSpecification.hasStatus(filter.getStatus()));
+        }
+
         Page<Transaction> transactions =
-                transactionRepository.findBySenderWalletUserIdOrReceiverWalletUserId(
-                        userId,
-                        userId,
+                transactionRepository.findAll(
+                        specification,
                         pageable
                 );
 

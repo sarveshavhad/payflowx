@@ -2,6 +2,7 @@ package com.payflowx.payment_core.transaction.controller;
 
 
 import com.payflowx.payment_core.transaction.dto.TransactionDetailsResponse;
+import com.payflowx.payment_core.transaction.dto.TransactionFilterRequest;
 import com.payflowx.payment_core.transaction.dto.TransactionResponse;
 import com.payflowx.payment_core.transaction.service.TransactionService;
 import com.payflowx.payment_core.user.entity.User;
@@ -22,6 +23,9 @@ public class TransactionController {
 
     @GetMapping("/my")
     public Page<TransactionResponse> getMyTransactions(
+
+            TransactionFilterRequest filter,
+
             @RequestParam(defaultValue = "0")
             int page,
 
@@ -33,7 +37,7 @@ public class TransactionController {
                 .getAuthentication()
                 .getPrincipal();
 
-        return transactionService.getMyTransactions(currentUser.getId(), page, size);
+        return transactionService.getMyTransactions(currentUser.getId(),filter, page, size);
     }
 
     @GetMapping("/{transactionId}")
