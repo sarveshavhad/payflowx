@@ -1,6 +1,7 @@
 package com.payflowx.payment_core.transaction.controller;
 
 
+import com.payflowx.payment_core.transaction.dto.RefundResponse;
 import com.payflowx.payment_core.transaction.dto.TransactionDetailsResponse;
 import com.payflowx.payment_core.transaction.dto.TransactionFilterRequest;
 import com.payflowx.payment_core.transaction.dto.TransactionResponse;
@@ -49,5 +50,16 @@ public class TransactionController {
                 .getPrincipal();
 
         return transactionService.getTransaction(transactionId, currentUser.getId());
+    }
+
+    @PostMapping("/{transactionId}/refund")
+    public RefundResponse refundTransaction(@PathVariable UUID transactionId){
+
+        User currentUser = (User) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        return transactionService.refundTransaction(transactionId, currentUser.getId());
     }
 }

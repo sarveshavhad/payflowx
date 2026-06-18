@@ -1,5 +1,6 @@
 package com.payflowx.payment_core.transaction.repository;
 
+import com.payflowx.payment_core.common.enums.TransactionType;
 import com.payflowx.payment_core.transaction.entity.Transaction;
 //import org.springframework.data.domain.Page;
 //import org.springframework.data.domain.Pageable;
@@ -14,4 +15,5 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID>, JpaSpecificationExecutor<Transaction> {
 
+    boolean existsByOriginalTransactionIdAndType(UUID transactionId, TransactionType transactionType);
 }

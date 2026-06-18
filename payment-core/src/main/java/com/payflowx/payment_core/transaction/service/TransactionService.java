@@ -2,8 +2,11 @@ package com.payflowx.payment_core.transaction.service;
 
 import com.payflowx.payment_core.common.enums.TransactionStatus;
 import com.payflowx.payment_core.common.enums.TransactionType;
+import com.payflowx.payment_core.exception.RefundNotAllowedException;
 import com.payflowx.payment_core.exception.TransactionAccessDeniedException;
+import com.payflowx.payment_core.exception.TransactionAlreadyRefundedException;
 import com.payflowx.payment_core.exception.TransactionNotFoundException;
+import com.payflowx.payment_core.transaction.dto.RefundResponse;
 import com.payflowx.payment_core.transaction.dto.TransactionDetailsResponse;
 import com.payflowx.payment_core.transaction.dto.TransactionFilterRequest;
 import com.payflowx.payment_core.transaction.dto.TransactionResponse;
@@ -11,6 +14,8 @@ import com.payflowx.payment_core.transaction.entity.Transaction;
 import com.payflowx.payment_core.transaction.repository.TransactionRepository;
 import com.payflowx.payment_core.transaction.specification.TransactionSpecification;
 import com.payflowx.payment_core.wallet.entity.Wallet;
+import com.payflowx.payment_core.wallet.repository.WalletRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +33,8 @@ import java.util.UUID;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
+
+    private final WalletRepository walletRepository;
 
     public Transaction createPendingTransaction(
             Wallet sender,
@@ -127,6 +134,74 @@ public class TransactionService {
                 transaction.getStatus(),
                 transaction.getDescription(),
                 transaction.getCreatedAt()
+        );
+
+    }
+
+    @Transactional
+    public RefundResponse refundTransaction(UUID transactionId, UUID currentUserId) {
+        Transaction originalTransaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() ->new TransactionNotFoundException("Transaction not found"));
+
+        UUID originalSenderId = originalTransaction.getSenderWallet().getUser().getId();
+
+        if(!originalSenderId.equals(currentUserId)){
+            throw new TransactionAccessDeniedException("Only transaction sender can request refund");
+        }
+
+        if(originalTransaction.getType() != TransactionType.WALLET_TRANSFER){
+            throw new RefundNotAllowedException("Only wallet transfer can be refunded");
+        }
+
+        if(originalTransaction.getStatus() != TransactionStatus.SUCCESS){
+            throw new RefundNotAllowedException("Only successful transaction can be refunded");
+        }
+
+        if(transactionRepository.existsByOriginalTransactionIdAndType(transactionId, TransactionType.REFUND)){
+            throw new TransactionAlreadyRefundedException("Transaction already refunded");
+        }
+
+        Wallet refundSender = originalTransaction.getReceiverWallet();
+
+        Wallet refundReceiver = originalTransaction.getSenderWallet();
+
+        BigDecimal refundAmount = originalTransaction.getAmount();
+
+        if(refundSender.getBalance().compareTo(refundAmount) < 0){
+            throw new RefundNotAllowedException("Insufficient balance for refund");
+        }
+
+        Transaction refundTransaction = createPendingTransaction(
+                refundSender,
+                refundReceiver,
+                refundAmount,
+                TransactionType.REFUND,
+                "Refund for transaction: " + originalTransaction.getId()
+        );
+
+        refundTransaction.setOriginalTransaction(originalTransaction);
+
+        transactionRepository.save(refundTransaction);
+
+        refundSender.setBalance(refundSender.getBalance().subtract(refundAmount));
+
+        refundReceiver.setBalance(refundReceiver.getBalance().add(refundAmount));
+
+        walletRepository.save(refundSender);
+        walletRepository.save(refundReceiver);
+
+        markSuccess(refundTransaction);
+
+        originalTransaction.setStatus(
+                TransactionStatus.REFUNDED
+        );
+
+        transactionRepository.save(originalTransaction);
+
+        return new RefundResponse(
+                refundTransaction.getId(),
+                refundTransaction.getAmount(),
+                refundTransaction.getStatus()
         );
 
     }

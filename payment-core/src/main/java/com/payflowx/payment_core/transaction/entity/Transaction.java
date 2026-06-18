@@ -25,6 +25,10 @@ public class Transaction extends BaseEntity {
     @JoinColumn(name = "receiver_wallet_id", nullable = false)
     private Wallet receiverWallet;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "original_transaction_id")
+    private Transaction originalTransaction;
+
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
